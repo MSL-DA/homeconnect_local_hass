@@ -237,14 +237,26 @@ class HCLight(HCEntity, LightEntity):
             )
 
         if self._entity is not None and self._entity.value is not True:
-            message_data.append({"uid": self._entity.uid, "value": True})
+            # Sent as its own write, before any color/brightness/color-temp
+            # data, rather than bundled into one combined message - some
+            # appliances reject the combined form outright (confirmed live on
+            # upstream #477, a Siemens LC91KWW60/04 ambient light: a bare
+            # power-on write succeeds, one that also carries a color value
+            # gets the whole message rejected with WriteRequest NotAvailable).
+            power_message = HC_Message(
+                resource="/ro/values",
+                action=Action.POST,
+                data=[{"uid": self._entity.uid, "value": True}],
+            )
+            await self._runtime_data.appliance.session.send_sync(power_message)
 
-        message = HC_Message(
-            resource="/ro/values",
-            action=Action.POST,
-            data=message_data,
-        )
-        await self._runtime_data.appliance.session.send_sync(message)
+        if message_data:
+            message = HC_Message(
+                resource="/ro/values",
+                action=Action.POST,
+                data=message_data,
+            )
+            await self._runtime_data.appliance.session.send_sync(message)
 
     @error_decorator
     async def async_turn_off(self, **kwargs: Any) -> None:
