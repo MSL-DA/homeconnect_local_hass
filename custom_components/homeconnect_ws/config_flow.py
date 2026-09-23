@@ -436,6 +436,10 @@ class HomeConnectConfigFlow(ConfigFlow, domain=DOMAIN):
             psk64=self.data[CONF_PSK],
             iv64=self.data.get(CONF_AES_IV, None),
             connection_callback=connection_callback,
+            # Same reason as coordinator.py: keep socket/session logs under
+            # this integration's logger so HA's homeconnect_ws log filter
+            # includes them.
+            logger=_LOGGER,
         )
         try:
             await appliance.connect()
