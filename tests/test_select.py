@@ -299,7 +299,9 @@ async def test_start_only_program_available_with_read_only_selected_program(
             action=Action.POST,
             data={
                 "program": 501,
-                "options": [{"uid": 401, "value": None}, {"uid": 402, "value": None}],
+                # No option has a reported value yet, so none goes out -
+                # the appliance rejects {"value": null} entries with 400.
+                "options": [],
             },
         )
     )
@@ -415,7 +417,9 @@ async def test_select_program(
             action=Action.POST,
             data={
                 "program": 502,
-                "options": [{"uid": 401, "value": None}, {"uid": 402, "value": None}],
+                # No option has a reported value yet, so none goes out -
+                # the appliance rejects {"value": null} entries with 400.
+                "options": [],
             },
         )
     )
@@ -454,7 +458,9 @@ async def test_start_only_program_sends_known_option_values(
             action=Action.POST,
             data={
                 "program": 502,
-                "options": [{"uid": 401, "value": 1}, {"uid": 402, "value": None}],
+                # Option1 has a known value and goes out; Option2 has none
+                # and is left out instead of being sent as null.
+                "options": [{"uid": 401, "value": 1}],
             },
         )
     )

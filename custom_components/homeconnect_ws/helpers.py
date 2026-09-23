@@ -15,7 +15,7 @@ from .const import DOMAIN
 
 if TYPE_CHECKING:
     import re
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Callable, Coroutine, Iterator
 
     from home_disconnect import HomeAppliance
     from home_disconnect.entities import Entity as HcEntity
@@ -170,34 +170,67 @@ def is_unplugged_probe(appliance: HomeAppliance, option: Option) -> bool:
     return not bool(getattr(plugged, "value", False))
 
 
+def _writable_options(appliance: HomeAppliance, program: Program) -> Iterator[Option]:
+    """
+    Yield the program's options that may go into a program write right now.
+
+    Skips read-only options, an unplugged meat probe, and options the appliance
+    does not offer for this program at the moment (available is False): a
+    Siemens EQ.9 CoffeeMaker lists DisplayName on every beverage program but
+    never reports it or makes it available, and sending any value for it makes
+    the appliance reject the whole write with 400 - the same effect the
+    meat-probe special case guards against, just for the general case.
+    """
+    for opt in program._options:  # noqa: SLF001
+        if opt.access != Access.READ_WRITE:
+            continue
+        if is_unplugged_probe(appliance, opt):
+            continue
+        if opt.available is False:
+            continue
+        yield opt
+
+
+def build_known_option_set(
+    appliance: HomeAppliance, program: Program
+) -> dict[int, str | int | bool]:
+    """
+    Collect the options whose value the appliance has reported, for a program write.
+
+    Mirrors the library's default merge (every READ_WRITE option's value_shadow)
+    so that known values still go out - a hood's Venting program needs its real
+    level to start - but leaves out options that have no value yet. The library
+    would send those as {"uid": x, "value": None}, and an appliance that never
+    reported the option rejects the whole write with 400.
+    """
+    options: dict[int, str | int | bool] = {}
+    for opt in _writable_options(appliance, program):
+        value = opt.value_shadow
+        if value is None:
+            value = opt.value
+        if value is None:
+            continue
+        options[opt.uid] = value
+    return options
+
+
 def build_full_option_set(
     appliance: HomeAppliance, program: Program
 ) -> dict[int, str | int | bool]:
     """
     Collect a complete, well-formed option set for a program write.
 
-    The library derives the option list from each option's value_shadow, which
-    stays None until the appliance has reported a value. An appliance that wants
-    a full option set rejects the resulting {"uid": x, "value": None} entries, so
-    fall back to the current value and finally to the option's minimum. Options
-    that stay valueless even then are left out rather than sent as null.
+    An appliance that wants a full option set rejects {"uid": x, "value": None}
+    entries, so on top of the known values fall back to the option's minimum.
+    Options that stay valueless even then are left out rather than sent as null.
     """
-    options: dict[int, str | int | bool] = {}
-    for opt in program._options:  # noqa: SLF001
-        if opt.access != Access.READ_WRITE:
+    options = build_known_option_set(appliance, program)
+    for opt in _writable_options(appliance, program):
+        if opt.uid in options or opt.min is None:
             continue
-        if is_unplugged_probe(appliance, opt):
-            continue
-        value = opt.value_shadow
-        if value is None:
-            value = opt.value
-        if value is None and opt.min is not None:
-            # opt.min is typed float (generic XML min/max parsing), but the
-            # wire protocol only ever takes int/str/bool option values.
-            value = int(opt.min)
-        if value is None:
-            continue
-        options[opt.uid] = value
+        # opt.min is typed float (generic XML min/max parsing), but the
+        # wire protocol only ever takes int/str/bool option values.
+        options[opt.uid] = int(opt.min)
     return options
 
 

@@ -34,7 +34,7 @@ from .const import (
 )
 from .coordinator import HomeConnectCoordinator
 from .entity_descriptions import get_available_entities
-from .helpers import error_decorator, get_config_entry_from_call
+from .helpers import build_known_option_set, error_decorator, get_config_entry_from_call
 from .profile_storage import load_description_files, remove_description_files
 
 if TYPE_CHECKING:
@@ -231,7 +231,15 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         if appliance.selected_program:
             try:
-                await appliance.selected_program.start(options)
+                # The requested start_in/finish_in on top of the known option
+                # values; the default merge would also add null for every
+                # option the appliance never reported, and the appliance
+                # rejects the write with 400. See HCStartButton.
+                options = {
+                    **build_known_option_set(appliance, appliance.selected_program),
+                    **options,
+                }
+                await appliance.selected_program.start(options, override_options=True)
             except CodeResponsError as exc:
                 _raise_start_error(exc)
         else:
