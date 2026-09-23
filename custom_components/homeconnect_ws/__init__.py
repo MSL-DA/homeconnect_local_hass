@@ -231,7 +231,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
         if appliance.selected_program:
             try:
-                await appliance.selected_program.start(options)
+                # Only the explicitly requested options (start_in/finish_in);
+                # the default merge would add every option's raw shadow value,
+                # including null for ones the appliance never reported, and
+                # the appliance rejects the write with 400. See HCStartButton.
+                await appliance.selected_program.start(options, override_options=True)
             except CodeResponsError as exc:
                 _raise_start_error(exc)
         else:

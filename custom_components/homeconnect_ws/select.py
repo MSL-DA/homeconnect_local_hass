@@ -227,7 +227,8 @@ class HCProgram(HCSelect):
             ensure_writable(self._entity)
             await selected_program.select(override_options=True)
         elif selected_program.execution == Execution.START_ONLY:
-            await selected_program.start()
+            # Same as HCStartButton: no raw shadow values, see there.
+            await selected_program.start(override_options=True)
 
     async def _select_with_full_option_set(self, program: Program) -> None:
         """Write program and options together, for appliances that demand both."""

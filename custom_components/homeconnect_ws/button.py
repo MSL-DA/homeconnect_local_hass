@@ -108,4 +108,10 @@ class HCStartButton(HCEntity, ButtonEntity):
             options = build_full_option_set(self._runtime_data.appliance, selected_program)
             await selected_program.start(options, override_options=True)
         else:
-            await selected_program.start()
+            # override_options=True (send no options) for the same reason
+            # HCProgram.async_select_option does: the library's default merge
+            # resends every READ_WRITE option's raw shadow value, and one the
+            # appliance never reported goes out as {"value": null}, which the
+            # appliance rejects with 400 for the whole write (seen on a
+            # Siemens EQ.9 CoffeeMaker with 1.7.1, where this branch ran).
+            await selected_program.start(override_options=True)

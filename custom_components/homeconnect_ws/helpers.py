@@ -188,6 +188,14 @@ def build_full_option_set(
             continue
         if is_unplugged_probe(appliance, opt):
             continue
+        if opt.available is False:
+            # The appliance does not offer this option for the selected
+            # program right now (e.g. MultipleBeverages on a Siemens EQ.9 while
+            # HotWater is selected, or DisplayName which it never reports).
+            # Sending a value for it anyway makes the appliance reject the
+            # whole write with 400 - the same effect the meat-probe special
+            # case above guards against, just for the general case.
+            continue
         value = opt.value_shadow
         if value is None:
             value = opt.value
