@@ -157,6 +157,12 @@ class HomeConnectCoordinator(DataUpdateCoordinator[None]):
             iv64=config_entry.data.get(CONF_AES_IV, None),
             session=async_get_clientsession(hass),
             connection_callback=self._connection_state_callback,
+            # HA's integration log viewer filters on the domain string
+            # "homeconnect_ws". home-disconnect defaults to loggers like
+            # home_disconnect.hc_socket, which that filter drops. Passing
+            # this integration's logger reparents those lines under
+            # custom_components.homeconnect_ws.* so they show up.
+            logger=_LOGGER,
             # Standalone washers/dryers get their own fallback-poll-based
             # reconnect (see LAUNDRY_RECONNECT_POLL_INTERVAL) instead of
             # home-disconnect's built-in one, so the two don't hammer the

@@ -70,6 +70,7 @@ async def test_load_unload_entry(
         iv64="AES_IV",
         session=ANY,
         connection_callback=ANY,
+        logger=coordinator._LOGGER,
         reconect=True,
     )
 
