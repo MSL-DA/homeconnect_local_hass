@@ -64,7 +64,9 @@ async def test_start(
             action=Action.POST,
             data={
                 "program": 500,
-                "options": [{"uid": 401, "value": None}, {"uid": 402, "value": None}],
+                # No option has a reported value yet, so none goes out -
+                # the appliance rejects {"value": null} entries with 400.
+                "options": [],
             },
         )
     )
@@ -108,6 +110,86 @@ async def test_start_full_option_set(
     )
 
 
+async def test_start_sends_known_values_but_skips_unavailable_options(
+    hass: HomeAssistant,
+    mock_appliance: MockAppliance,
+    patch_entity_description: None,
+) -> None:
+    """
+    Pressing start sends the options' known values, minus unavailable ones.
+
+    Option1 has a reported value and goes out (a hood's Venting program needs
+    its level, fork issue #14). Option2 has a value too, but the appliance has
+    withdrawn it for this program (available: false) - a value for an option
+    the appliance does not offer makes it reject the whole write with 400
+    (Siemens EQ.9 CoffeeMaker, fork issue #97).
+    """
+    entity_id = "button.fake_brand_homeappliance_activeprogram"
+    await mock_appliance.entities["Test.Option1"].update({"value": 1})
+    await mock_appliance.entities["Test.Option2"].update({"value": 2, "available": False})
+    assert await setup_config_entry(hass, MOCK_CONFIG_DATA)
+    await mock_appliance.entities["Test.SelectedProgram"].update({"value": 500})
+    await hass.async_block_till_done()
+
+    await hass.services.async_call(
+        domain=BUTTON_DOMAIN,
+        service=SERVICE_PRESS,
+        service_data={ATTR_ENTITY_ID: entity_id},
+        blocking=True,
+    )
+
+    mock_appliance.session.send_sync.assert_awaited_once_with(
+        Message(
+            resource="/ro/activeProgram",
+            action=Action.POST,
+            data={
+                "program": 500,
+                "options": [{"uid": 401, "value": 1}],
+            },
+        )
+    )
+
+
+async def test_start_full_option_set_skips_unavailable_options(
+    hass: HomeAssistant,
+    mock_appliance: MockAppliance,
+    patch_entity_description: None,
+) -> None:
+    """
+    The full option set leaves out options the appliance does not offer.
+
+    Confirmed live on a Siemens EQ.9 CoffeeMaker (fork issue #97): DisplayName
+    is listed on every beverage program with a min, but never reported or made
+    available. Filling it from min like the other valueless options made the
+    appliance reject every start with 400; without it the same write succeeds.
+    """
+    entity_id = "button.fake_brand_homeappliance_activeprogram"
+    await mock_appliance.entities["Test.Option1"].update({"min": 5})
+    await mock_appliance.entities["Test.Option2"].update({"min": 1, "available": False})
+    assert await setup_config_entry(hass, MOCK_CONFIG_DATA)
+    await mock_appliance.entities["Test.SelectedProgram"].update({"value": 500})
+    await hass.async_block_till_done()
+
+    with patch.object(Program, "full_option_set", new=True, create=True):
+        await hass.services.async_call(
+            domain=BUTTON_DOMAIN,
+            service=SERVICE_PRESS,
+            service_data={ATTR_ENTITY_ID: entity_id},
+            blocking=True,
+        )
+
+    mock_appliance.session.send_sync.assert_awaited_once_with(
+        Message(
+            resource="/ro/activeProgram",
+            action=Action.POST,
+            data={
+                "program": 500,
+                "options": [{"uid": 401, "value": 5}],
+            },
+        )
+    )
+
+
 async def test_start_available_for_select_only_program(
     hass: HomeAssistant,
     mock_appliance: MockAppliance,
@@ -142,7 +224,9 @@ async def test_start_available_for_select_only_program(
             action=Action.POST,
             data={
                 "program": 506,
-                "options": [{"uid": 401, "value": None}, {"uid": 402, "value": None}],
+                # No option has a reported value yet, so none goes out -
+                # the appliance rejects {"value": null} entries with 400.
+                "options": [],
             },
         )
     )

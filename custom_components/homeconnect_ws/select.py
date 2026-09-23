@@ -10,6 +10,7 @@ from homeassistant.components.select import SelectEntity
 from .entity import HCEntity
 from .helpers import (
     build_full_option_set,
+    build_known_option_set,
     create_entities,
     ensure_writable,
     entity_is_available,
@@ -227,8 +228,10 @@ class HCProgram(HCSelect):
             ensure_writable(self._entity)
             await selected_program.select(override_options=True)
         elif selected_program.execution == Execution.START_ONLY:
-            # Same as HCStartButton: no raw shadow values, see there.
-            await selected_program.start(override_options=True)
+            # Same as HCStartButton: known values only, no raw null shadow
+            # values, see there.
+            options = build_known_option_set(self._runtime_data.appliance, selected_program)
+            await selected_program.start(options, override_options=True)
 
     async def _select_with_full_option_set(self, program: Program) -> None:
         """Write program and options together, for appliances that demand both."""
