@@ -223,7 +223,14 @@ async def test_device_registry_serial_number(
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
 
-    device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, entry.unique_id)})
+    device_registry = dr.async_get(hass)
+    if hasattr(device_registry, "async_get_device_by_identifier"):
+        # Newer HA: async_get_device is deprecated, identifiers aren't unique across entries.
+        device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, entry.unique_id), entry.entry_id
+        )
+    else:
+        device = device_registry.async_get_device(identifiers={(DOMAIN, entry.unique_id)})
     assert device is not None
     assert device.serial_number == MOCK_APPLIANCE_INFO["serialNumber"]
 
