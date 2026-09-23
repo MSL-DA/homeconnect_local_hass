@@ -21,7 +21,7 @@
                 "/^\\.github/workflows/test\\.yaml$/"
             ],
             "matchStrings": [
-                "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+- \"homeassistant==(?<currentValue>[^\"]+)\""
+                "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+ha-version: \"homeassistant==(?<currentValue>[^\"]+)\""
             ]
         }
     ],
