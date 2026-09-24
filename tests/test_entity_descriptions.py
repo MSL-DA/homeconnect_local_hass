@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, Mock
+from unittest.mock import MagicMock, Mock, patch
+from zoneinfo import ZoneInfo
 
 from custom_components.homeconnect_ws import HCData, entity_descriptions
 from custom_components.homeconnect_ws.entity_descriptions import (
@@ -17,6 +19,7 @@ from custom_components.homeconnect_ws.entity_descriptions import (
     HCSwitchEntityDescription,
 )
 from custom_components.homeconnect_ws.entity_descriptions.common import (
+    COMMON_ENTITY_DESCRIPTIONS,
     generate_power_switch,
     generate_program,
     generate_start_button,
@@ -611,3 +614,29 @@ def test_descriptions_have_english_name() -> None:
                 missing.append(f"{domain}.{key}")
 
     assert sorted(set(missing)) == []
+
+
+def test_sync_time_button_writes_naive_local_timestamp() -> None:
+    """
+    The clock button sends local time without a UTC offset.
+
+    A Siemens HB876G8B6 oven reports BSH.Common.Setting.ApplianceDateTime as
+    "2026-09-24T10:36:09" - no offset, local time. dt_util.now() is timezone
+    aware, so the offset has to be dropped rather than sent along.
+    """
+    description = next(
+        entity_description
+        for entity_description in COMMON_ENTITY_DESCRIPTIONS["button"]
+        if getattr(entity_description, "key", None) == "button_sync_time"
+    )
+    # No isinstance() check here - HA clones these classes at runtime, see
+    # _resolve_description in entity_descriptions/__init__.py.
+    assert description.entity == "BSH.Common.Setting.ApplianceDateTime"
+    assert description.press_value_fn is not None
+
+    local_now = datetime(2026, 9, 24, 10, 36, 9, 123456, tzinfo=ZoneInfo("Europe/Berlin"))
+    with patch(
+        "custom_components.homeconnect_ws.entity_descriptions.common.dt_util.now",
+        return_value=local_now,
+    ):
+        assert description.press_value_fn() == "2026-09-24T10:36:09"

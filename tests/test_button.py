@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
+from custom_components import homeconnect_ws
+from custom_components.homeconnect_ws import entity_descriptions
+from custom_components.homeconnect_ws.entity_descriptions import HCButtonEntityDescription
 from home_disconnect.entities import Program
 from home_disconnect.message import Action, Message
 from homeassistant.components.button import DOMAIN as BUTTON_DOMAIN
@@ -14,7 +17,7 @@ from homeassistant.const import ATTR_ENTITY_ID, ATTR_FRIENDLY_NAME
 from homeassistant.exceptions import HomeAssistantError
 
 from . import setup_config_entry
-from .const import MOCK_CONFIG_DATA
+from .const import ENTITY_DESCRIPTIONS, MOCK_CONFIG_DATA
 
 if TYPE_CHECKING:
     from home_disconnect.testutils import MockAppliance
@@ -345,5 +348,49 @@ async def test_abort(
             resource="/ro/values",
             action=Action.POST,
             data={"uid": 300, "value": True},
+        )
+    )
+
+
+async def test_press_writes_value_from_press_value_fn(
+    hass: HomeAssistant,
+    mock_appliance: MockAppliance,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    A button backed by a Setting writes its own value instead of True.
+
+    Commands take a bare True, but a Setting-backed button (BSH.Common.Setting
+    .ApplianceDateTime, the appliance clock) has to send an actual value, and
+    one that is computed when the button is pressed rather than when the
+    entity description is built.
+    """
+    descriptions = {
+        **ENTITY_DESCRIPTIONS,
+        "button": [
+            HCButtonEntityDescription(
+                key="Test.Switch",
+                name="ValueButton",
+                entity="Test.Switch",
+                press_value_fn=lambda: "2026-09-24T10:36:09",
+            )
+        ],
+    }
+    for module in (entity_descriptions, homeconnect_ws):
+        monkeypatch.setattr(module, "get_available_entities", Mock(return_value=descriptions))
+    assert await setup_config_entry(hass, MOCK_CONFIG_DATA)
+
+    await hass.services.async_call(
+        domain=BUTTON_DOMAIN,
+        service=SERVICE_PRESS,
+        service_data={ATTR_ENTITY_ID: "button.fake_brand_homeappliance_valuebutton"},
+        blocking=True,
+    )
+
+    mock_appliance.session.send_sync.assert_awaited_once_with(
+        Message(
+            resource="/ro/values",
+            action=Action.POST,
+            data={"uid": 201, "value": "2026-09-24T10:36:09"},
         )
     )

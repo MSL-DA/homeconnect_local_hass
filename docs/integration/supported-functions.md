@@ -22,6 +22,7 @@ The following entities are available. Which ones appear depends on the appliance
 | Allow Cloud Connection | Switch | Enable or disable the appliance's connection to the Home Connect cloud |
 | Allow Consumer Insights | Switch | Enable or disable usage data collection by the Home Connect cloud |
 | Synchronize Time with Server | Switch | Whether the appliance keeps its clock in sync with a time server |
+| Sync time from Home Assistant | Button | Sets the appliance's own clock to Home Assistant's local time - useful for appliances with no cloud connection, and it keeps DST changes right |
 | Time Format | Select | 12-hour or 24-hour clock display |
 | Software Update | Update | Tracks/triggers installing an available firmware update |
 | Software Download | Update | Tracks/triggers downloading an available firmware update (only on appliances that support a separate download stage) |

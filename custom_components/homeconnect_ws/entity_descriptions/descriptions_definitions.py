@@ -121,6 +121,10 @@ class HCButtonEntityDescription(
     """Description for Button Entity."""
 
     available_access: tuple[Access, ...] = (Access.READ_WRITE, Access.WRITE_ONLY)
+    # A button writes True to its Command by default. A button backed by a
+    # Setting instead supplies the value to write here, evaluated on press so
+    # it can depend on the current state (e.g. the current time).
+    press_value_fn: Callable[[], str | int | bool] | None = None
 
 
 class HCNumberEntityDescription(
