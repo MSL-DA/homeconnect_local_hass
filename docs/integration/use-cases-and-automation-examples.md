@@ -5,7 +5,6 @@
 - Monitor the program status of the appliances.
 - Control the light of your appliances.
 - Adjust the appliance settings.
-- Keep the appliance's clock right without giving it internet access - set it from Home Assistant once a day.
 
 ## Automation examples
 
