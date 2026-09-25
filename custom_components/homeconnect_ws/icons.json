@@ -531,6 +531,9 @@
             "button_mains_power_off": {
                 "default": "mdi:power-plug-off"
             },
+            "button_sync_time": {
+                "default": "mdi:clock-sync"
+            },
             "button_hood_carbon_filter_reset": {
                 "default": "mdi:restore"
             },

@@ -4248,6 +4248,9 @@
       "button_mains_power_off": {
         "name": "Ausschalten"
       },
+      "button_sync_time": {
+        "name": "Uhrzeit von Home Assistant übernehmen"
+      },
       "button_hood_carbon_filter_reset": {
         "name": "Kohlefilter zurücksetzen"
       },

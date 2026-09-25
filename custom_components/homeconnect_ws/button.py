@@ -19,7 +19,7 @@ from .helpers import (
 )
 
 if TYPE_CHECKING:
-    from home_disconnect.entities import ActiveProgram, Command
+    from home_disconnect.entities import ActiveProgram, Command, Setting
     from homeassistant.core import HomeAssistant
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -42,13 +42,16 @@ async def async_setup_entry(
 
 
 class HCButton(HCEntity, ButtonEntity):
-    """Abort Button Entity."""
+    """Button Entity."""
 
-    _entity: Command
+    _entity: Command | Setting
     entity_description: HCButtonEntityDescription
 
+    @error_decorator
     async def async_press(self) -> None:
-        await self._entity.set_value(True)
+        press_value_fn = self.entity_description.press_value_fn
+        value = True if press_value_fn is None else press_value_fn()
+        await self._entity.set_value(value)
 
 
 class HCStartButton(HCEntity, ButtonEntity):

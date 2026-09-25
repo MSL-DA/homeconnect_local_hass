@@ -22,6 +22,7 @@ from homeassistant.const import (
     EntityCategory,
     UnitOfTime,
 )
+from homeassistant.util import dt as dt_util
 
 from .descriptions_definitions import (
     EntityDescriptions,
@@ -335,6 +336,15 @@ COMMON_ENTITY_DESCRIPTIONS: _EntityDescriptionsDefinitionsType = {
         HCButtonEntityDescription(
             key="button_mains_power_off",
             entity="BSH.Common.Command.MainsPowerOff",
+        ),
+        HCButtonEntityDescription(
+            key="button_sync_time",
+            entity="BSH.Common.Setting.ApplianceDateTime",
+            entity_category=EntityCategory.CONFIG,
+            # The appliance reports and expects a naive ISO-8601 local
+            # timestamp ("2026-09-24T10:36:09"), so drop the offset that
+            # dt_util.now() carries rather than sending it along.
+            press_value_fn=lambda: dt_util.now().replace(tzinfo=None).isoformat(timespec="seconds"),
         ),
     ],
     "binary_sensor": [

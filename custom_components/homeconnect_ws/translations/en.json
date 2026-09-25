@@ -3923,6 +3923,9 @@
       "button_mains_power_off": {
         "name": "PowerOFF"
       },
+      "button_sync_time": {
+        "name": "Sync time from Home Assistant"
+      },
       "button_hood_carbon_filter_reset": {
         "name": "Carbon filter reset"
       },
